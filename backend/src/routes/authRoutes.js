@@ -60,5 +60,12 @@ router.get("/me", protect, (req, res) => {
   res.json(req.user);
 });
 
+router.get("/find/:email", async (req, res) => {
+  const user = await User.findOne({ email: req.params.email }).select("_id name email");
+  if (!user) return res.status(404).json({ message: "User not found" });
+  res.json(user);
+});
+
+
 
 export default router;
