@@ -8,6 +8,8 @@ import authRoutes from "./routes/authRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
+
 
 const app = express();
 
@@ -20,6 +22,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/files", fileRoutes);
+app.use("/api/comments", commentRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "team-task-manager-api", ts: new Date().toISOString() });
