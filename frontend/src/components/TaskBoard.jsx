@@ -16,9 +16,13 @@ export default function TaskBoard({ projectId }) {
   });
 
   const [showModal, setShowModal] = useState(false);
-  const [activeTask, setActiveTask] = useState(null); // <-- NEW
+  const [activeTask, setActiveTask] = useState(null);
 
-  // reusable fetch method
+  // NEW: search + filter
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  // Reusable fetch method
   const refreshTasks = async () => {
     const res = await API.get(`/tasks/${projectId}`);
     const grouped = { "To Do": [], "In Progress": [], "Done": [] };
@@ -30,12 +34,10 @@ export default function TaskBoard({ projectId }) {
     setTasks(grouped);
   };
 
-  // load tasks on mount / project change
   useEffect(() => {
     refreshTasks();
   }, [projectId]);
 
-  // Drag handler
   const onDragEnd = async (result) => {
     const { source, destination } = result;
     if (!destination) return;
@@ -48,37 +50,77 @@ export default function TaskBoard({ projectId }) {
     const newTasks = { ...tasks };
     const dragged = newTasks[srcCol][source.index];
 
-    // remove + insert
     newTasks[srcCol].splice(source.index, 1);
     newTasks[destCol].splice(destination.index, 0, dragged);
 
     setTasks(newTasks);
 
-    // sync backend
     await API.put(`/tasks/${dragged._id}/status`, {
       status: destCol,
     });
   };
 
+  // FILTER TASKS FOR DISPLAY
+  const getVisibleTasks = (col) => {
+    return tasks[col]
+      .filter((t) =>
+        t.title.toLowerCase().includes(search.toLowerCase())
+      )
+      .filter((t) => (statusFilter ? t.status === statusFilter : true));
+  };
+
   return (
     <div style={{ padding: "20px" }}>
-      {/* Create Task Button */}
-      <button
-        onClick={() => setShowModal(true)}
-        style={{
-          marginBottom: "15px",
-          padding: "8px 12px",
-          background: "#4CAF50",
-          color: "white",
-          border: "none",
-          borderRadius: "5px",
-          cursor: "pointer",
-        }}
-      >
-        + Create Task
-      </button>
+      
+      {/* TOP BAR: Search + Filter + Create Task */}
+      <div style={{ display: "flex", gap: "10px", marginBottom: "15px" }}>
+        
+        {/* SEARCH */}
+        <input
+          placeholder="Search tasks..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            flex: 1,
+            padding: "8px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+          }}
+        />
 
-      {/* Create Task Modal */}
+        {/* STATUS FILTER */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          style={{
+            padding: "8px",
+            borderRadius: "5px",
+            border: "1px solid #ccc",
+          }}
+        >
+          <option value="">All</option>
+          <option value="To Do">To Do</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Done">Done</option>
+        </select>
+
+        {/* CREATE BUTTON */}
+        <button
+          onClick={() => setShowModal(true)}
+          style={{
+            padding: "8px 14px",
+            background: "#4CAF50",
+            color: "white",
+            border: "none",
+            borderRadius: "5px",
+            cursor: "pointer",
+          }}
+        >
+          + Task
+        </button>
+      </div>
+
+      {/* CREATE TASK MODAL */}
       {showModal && (
         <CreateTaskModal
           projectId={projectId}
@@ -87,7 +129,7 @@ export default function TaskBoard({ projectId }) {
         />
       )}
 
-      {/* Task Details Modal */}
+      {/* TASK DETAILS MODAL */}
       {activeTask && (
         <TaskDetailsModal
           task={activeTask}
@@ -96,7 +138,7 @@ export default function TaskBoard({ projectId }) {
         />
       )}
 
-      {/* Drag and Drop Board */}
+      {/* KANBAN BOARD */}
       <DragDropContext onDragEnd={onDragEnd}>
         <div style={{ display: "flex", gap: "20px" }}>
           {["To Do", "In Progress", "Done"].map((col) => (
@@ -115,7 +157,7 @@ export default function TaskBoard({ projectId }) {
                 >
                   <h3 style={{ textAlign: "center" }}>{col}</h3>
 
-                  {tasks[col].map((task, index) => (
+                  {getVisibleTasks(col).map((task, index) => (
                     <Draggable
                       key={task._id}
                       draggableId={task._id}
@@ -123,10 +165,10 @@ export default function TaskBoard({ projectId }) {
                     >
                       {(provided) => (
                         <div
+                          ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          ref={provided.innerRef}
-                          onClick={() => setActiveTask(task)} // <-- OPEN MODAL
+                          onClick={() => setActiveTask(task)}
                           style={{
                             padding: "10px",
                             marginBottom: "10px",
