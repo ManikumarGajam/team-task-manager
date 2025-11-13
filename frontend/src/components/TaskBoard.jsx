@@ -6,6 +6,7 @@ import {
   Draggable,
 } from "@hello-pangea/dnd";
 import CreateTaskModal from "./CreateTaskModal";
+import TaskDetailsModal from "./TaskDetailsModal";
 
 export default function TaskBoard({ projectId }) {
   const [tasks, setTasks] = useState({
@@ -15,6 +16,7 @@ export default function TaskBoard({ projectId }) {
   });
 
   const [showModal, setShowModal] = useState(false);
+  const [activeTask, setActiveTask] = useState(null); // <-- NEW
 
   // reusable fetch method
   const refreshTasks = async () => {
@@ -70,17 +72,26 @@ export default function TaskBoard({ projectId }) {
           color: "white",
           border: "none",
           borderRadius: "5px",
-          cursor: "pointer"
+          cursor: "pointer",
         }}
       >
         + Create Task
       </button>
 
-      {/* Modal */}
+      {/* Create Task Modal */}
       {showModal && (
         <CreateTaskModal
           projectId={projectId}
           onClose={() => setShowModal(false)}
+          refresh={refreshTasks}
+        />
+      )}
+
+      {/* Task Details Modal */}
+      {activeTask && (
+        <TaskDetailsModal
+          task={activeTask}
+          onClose={() => setActiveTask(null)}
           refresh={refreshTasks}
         />
       )}
@@ -115,12 +126,14 @@ export default function TaskBoard({ projectId }) {
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                           ref={provided.innerRef}
+                          onClick={() => setActiveTask(task)} // <-- OPEN MODAL
                           style={{
                             padding: "10px",
                             marginBottom: "10px",
                             background: "white",
                             borderRadius: "6px",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                            cursor: "pointer",
                             ...provided.draggableProps.style,
                           }}
                         >
