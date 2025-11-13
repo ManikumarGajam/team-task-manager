@@ -1,6 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -53,5 +54,11 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+// Protected test route — return current user info
+router.get("/me", protect, (req, res) => {
+  // protect middleware sets req.user (without password)
+  res.json(req.user);
+});
+
 
 export default router;
