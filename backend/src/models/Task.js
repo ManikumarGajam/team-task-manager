@@ -16,6 +16,7 @@ const taskSchema = new mongoose.Schema(
       enum: ["To Do", "In Progress", "Done"],
       default: "To Do",
     },
+    file: { type: String } 
   },
   { timestamps: true }
 );
