@@ -1,6 +1,8 @@
 import Task from "../models/Task.js";
 import Project from "../models/Project.js";
+import Activity from "../models/Activity.js";   // New
 
+// CREATE TASK
 export const createTask = async (req, res) => {
   try {
     const { projectId, title, description, assignee, dueDate } = req.body;
@@ -21,16 +23,27 @@ export const createTask = async (req, res) => {
       dueDate,
     });
 
+    // LOG ACTIVITY: Task created
+    await Activity.create({
+      task: task._id,
+      user: req.user._id,
+      action: "Task created",
+    });
+
     res.status(201).json(task);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+// GET TASKS BY PROJECT
+// --------------------------------------------------
 export const getProjectTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({ project: req.params.projectId })
-      .populate("assignee", "name email");
+    const tasks = await Task.find({ project: req.params.projectId }).populate(
+      "assignee",
+      "name email"
+    );
 
     res.json(tasks);
   } catch (err) {
@@ -38,6 +51,9 @@ export const getProjectTasks = async (req, res) => {
   }
 };
 
+// --------------------------------------------------
+// UPDATE TASK STATUS
+// --------------------------------------------------
 export const updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -47,6 +63,13 @@ export const updateStatus = async (req, res) => {
 
     task.status = status;
     await task.save();
+
+    // LOG ACTIVITY: Status updated
+    await Activity.create({
+      task: task._id,
+      user: req.user._id,
+      action: `Status changed to ${status}`,
+    });
 
     res.json(task);
   } catch (err) {
