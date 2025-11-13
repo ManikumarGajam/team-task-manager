@@ -7,6 +7,7 @@ import { connectDB } from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
 import projectRoutes from "./routes/projectRoutes.js";
 import taskRoutes from "./routes/taskRoutes.js";
+import fileRoutes from "./routes/fileRoutes.js";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(morgan(process.env.NODE_ENV === "development" ? "dev" : "combined"));
 app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/files", fileRoutes);
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "team-task-manager-api", ts: new Date().toISOString() });
