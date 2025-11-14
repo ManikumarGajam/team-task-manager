@@ -23,6 +23,8 @@ app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
 app.use("/api/files", fileRoutes);
 app.use("/api/comments", commentRoutes);
+app.use("/uploads", express.static("uploads"));
+
 
 app.get("/health", (_req, res) => {
   res.json({ ok: true, service: "team-task-manager-api", ts: new Date().toISOString() });
