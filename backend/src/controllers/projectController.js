@@ -1,5 +1,7 @@
 import Project from "../models/Project.js";
+import User from "../models/User.js";
 
+// Create Project (existing)
 export const createProject = async (req, res) => {
   try {
     const { name, description } = req.body;
@@ -17,6 +19,7 @@ export const createProject = async (req, res) => {
   }
 };
 
+// Get projects for current user (existing)
 export const getMyProjects = async (req, res) => {
   try {
     const projects = await Project.find({
@@ -29,6 +32,7 @@ export const getMyProjects = async (req, res) => {
   }
 };
 
+// Add member to project (existing)
 export const addMember = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -47,7 +51,29 @@ export const addMember = async (req, res) => {
       await project.save();
     }
 
-    res.json(project);
+    // return populated project
+    const populated = await Project.findById(projectId).populate(
+      "members",
+      "_id name email"
+    );
+
+    res.json(populated);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// NEW: Get members of a project
+export const getProjectMembers = async (req, res) => {
+  try {
+    const project = await Project.findById(req.params.id).populate(
+      "members",
+      "_id name email"
+    );
+
+    if (!project) return res.status(404).json({ message: "Project not found" });
+
+    res.json(project.members);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
