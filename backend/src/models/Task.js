@@ -1,5 +1,18 @@
 import mongoose from "mongoose";
 
+const fileSchema = new mongoose.Schema(
+  {
+    url: { type: String, required: true },
+    fileName: { type: String, required: true },
+    uploadedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+  },
+  { timestamps: true }
+);
+
 const taskSchema = new mongoose.Schema(
   {
     project: {
@@ -16,7 +29,23 @@ const taskSchema = new mongoose.Schema(
       enum: ["To Do", "In Progress", "Done"],
       default: "To Do",
     },
-    file: { type: String } 
+
+    // UPDATED
+    files: {
+      type: [fileSchema],
+      default: [],
+    },
+
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    projectOwner: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   { timestamps: true }
 );

@@ -1,227 +1,156 @@
 import { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { ThemeContext } from "../context/ThemeContext";   // 🔥 NEW
+import AppNavbar from "../components/AppNavbar";
+import Sidebar from "../components/Sidebar";
 import API from "../api/axios";
 import TaskBoard from "../components/TaskBoard";
 
+// small CreateProject modal inlined
+function CreateProjectModal({ show, onClose, onCreate }) {
+  const [form, setForm] = useState({ name: "", description: "" });
+  if (!show) return null;
+  return (
+    <div className="modal-overlay">
+      <div className="modal-card">
+        <button className="modal-close" onClick={onClose}>✕</button>
+        <h5>Create Project</h5>
+        <input className="form-control my-2" placeholder="Project name" value={form.name} onChange={(e)=>setForm({...form, name:e.target.value})} />
+        <input className="form-control my-2" placeholder="Description" value={form.description} onChange={(e)=>setForm({...form, description:e.target.value})} />
+        <div className="d-flex justify-content-end gap-2">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" onClick={() => { onCreate(form); setForm({name:"",description:""}) }}>Create</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const { user, logout } = useContext(AuthContext);
-  const { dark, setDark } = useContext(ThemeContext); // 🔥 NEW
 
   const [projects, setProjects] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
+  const [showCreateProject, setShowCreateProject] = useState(false);
 
-  // For creating project
-  const [projectForm, setProjectForm] = useState({
-    name: "",
-    description: ""
-  });
+  // members & users for add member
+  const [users, setUsers] = useState([]);
+  const [projectMembers, setProjectMembers] = useState([]);
+  const [selectedUserToAdd, setSelectedUserToAdd] = useState("");
 
-  // Add member
-  const [memberEmail, setMemberEmail] = useState("");
+  // sidebar toggle for small screens
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Load existing projects
   const loadProjects = async () => {
     const res = await API.get("/projects");
     setProjects(res.data);
+    if (!activeProject && res.data.length > 0) setActiveProject(res.data[0]._id);
+  };
 
-    // Auto select first project
-    if (!activeProject && res.data.length > 0) {
-      setActiveProject(res.data[0]._id);
-    }
+  const loadAllUsers = async () => {
+    const res = await API.get("/auth/all");
+    setUsers(res.data || []);
+  };
+
+  const loadProjectMembers = async (id) => {
+    const res = await API.get(`/projects/${id}/members`);
+    setProjectMembers(res.data || []);
   };
 
   useEffect(() => {
     loadProjects();
+    loadAllUsers();
   }, []);
 
-  // Create Project
-  const createProject = async () => {
-    if (!projectForm.name) return alert("Project name required");
+  useEffect(() => {
+    if (activeProject) loadProjectMembers(activeProject);
+  }, [activeProject]);
 
-    await API.post("/projects", projectForm);
-
-    setProjectForm({ name: "", description: "" });
-
+  const createProject = async (payload) => {
+    if (!payload.name) return alert("Project name required");
+    await API.post("/projects", payload);
+    setShowCreateProject(false);
     await loadProjects();
   };
 
-  // Add member to project
   const addMember = async () => {
-    if (!memberEmail) return alert("Enter member email");
-
-    // Fetch user by email
-    const res = await API.get(`/auth/find/${memberEmail}`).catch(() => null);
-
-    if (!res || !res.data) {
-      return alert("User not found. Ask them to signup first.");
-    }
-
-    const userId = res.data._id;
-
-    await API.put(`/projects/${activeProject}/add-member`, { userId });
-
+    if (!selectedUserToAdd) return alert("Select a user");
+    await API.put(`/projects/${activeProject}/add-member`, { userId: selectedUserToAdd });
+    setSelectedUserToAdd("");
+    await loadProjectMembers(activeProject);
     alert("Member added!");
-    setMemberEmail("");
-
-    await loadProjects();
   };
+
+  // filtered users for dropdown (exclude self & existing members)
+  const myId = user?._id;
+  const filteredUsers = users.filter(u => u._id !== myId && !projectMembers.some(m => m._id === u._id));
+
+  // get owner id quickly
+  const projectOwner = projects.find(p => p._id === activeProject)?.owner;
+  const isOwner = projectOwner === myId;
 
   return (
-    <div style={{ padding: "20px" }}>
-      {/* Header */}
-      <div style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: "20px"
-      }}>
-        <h2>Welcome {user?.name}</h2>
-
-        <div style={{ display: "flex", gap: "10px" }}>
-          {/* DARK / LIGHT MODE TOGGLE */}
-          <button
-            onClick={() => setDark(!dark)}
-            style={{
-              padding: "6px 12px",
-              background: dark ? "#444" : "#222",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer"
-            }}
-          >
-            {dark ? "Light Mode" : "Dark Mode"}
-          </button>
-
-          {/* LOGOUT */}
-          <button
-            onClick={logout}
-            style={{
-              padding: "6px 12px",
-              background: "#d9534f",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer"
-            }}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* CREATE PROJECT */}
-      <div>
-        <h3>Create New Project</h3>
-
-        <input
-          placeholder="Project Name"
-          value={projectForm.name}
-          onChange={(e) =>
-            setProjectForm({ ...projectForm, name: e.target.value })
-          }
-          style={{
-            padding: "8px",
-            marginRight: "10px",
-            borderRadius: "5px",
-            border: "1px solid #ccc"
-          }}
-        />
-
-        <input
-          placeholder="Project Description"
-          value={projectForm.description}
-          onChange={(e) =>
-            setProjectForm({ ...projectForm, description: e.target.value })
-          }
-          style={{
-            padding: "8px",
-            marginRight: "10px",
-            borderRadius: "5px",
-            border: "1px solid #ccc"
-          }}
-        />
-
-        <button
-          onClick={createProject}
-          style={{
-            padding: "8px 12px",
-            background: "#4CAF50",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer"
-          }}
-        >
-          Create Project
-        </button>
-      </div>
-
-      <hr style={{ margin: "20px 0" }} />
-
-      {/* SELECT PROJECT */}
-      <div>
-        <h3>Your Projects</h3>
-        <select
-          onChange={(e) => setActiveProject(e.target.value)}
-          value={activeProject || ""}
-          style={{
-            padding: "8px",
-            borderRadius: "5px",
-            border: "1px solid #ccc"
-          }}
-        >
-          <option value="" disabled>Select a project</option>
-          {projects.map((p) => (
-            <option value={p._id} key={p._id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* ADD MEMBER */}
-      {activeProject && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Add Member to Project</h3>
-
-          <input
-            placeholder="Member Email"
-            value={memberEmail}
-            onChange={(e) => setMemberEmail(e.target.value)}
-            style={{
-              padding: "8px",
-              marginRight: "10px",
-              borderRadius: "5px",
-              border: "1px solid #ccc"
-            }}
+    <>
+      <AppNavbar onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
+      <div className="d-flex" style={{ minHeight: "calc(100vh - 64px)" }}>
+        {/* Sidebar - hidden on small screens */}
+        <div style={{ width: 280 }} className={`${sidebarOpen ? "" : "d-none d-md-block"}`}>
+          <Sidebar
+            projects={projects}
+            activeProject={activeProject}
+            setActiveProject={(id) => { setActiveProject(id); setSidebarOpen(false); }}
+            onOpenCreateProject={() => setShowCreateProject(true)}
           />
-
-          <button
-            onClick={addMember}
-            style={{
-              padding: "8px 12px",
-              background: "#0275d8",
-              color: "white",
-              border: "none",
-              borderRadius: "5px",
-              cursor: "pointer"
-            }}
-          >
-            Add Member
-          </button>
         </div>
-      )}
 
-      <hr style={{ margin: "20px 0" }} />
+        <main className="flex-grow-1 p-3">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h4 style={{ marginBottom: 0 }}>{projects.find(p => p._id === activeProject)?.name || "No project selected"}</h4>
+              <div style={{ fontSize: 13, color: "var(--muted)" }}>
+                {projects.find(p => p._id === activeProject)?.description || ""}
+              </div>
+            </div>
 
-      {/* TASK BOARD */}
-      {activeProject ? (
-        <TaskBoard projectId={activeProject} />
-      ) : (
-        <p>No project selected</p>
-      )}
-    </div>
+            <div className="d-flex gap-2 align-items-center">
+              {activeProject && (
+                <div className="d-flex gap-2 align-items-center">
+                  <div>
+                    <strong>Members:</strong>
+                    <div className="d-inline-block ms-2" style={{ fontSize: 13 }}>
+                      {projectMembers.map(m => m.name).join(", ") || "—"}
+                    </div>
+                  </div>
+
+                  {isOwner && (
+                    <div className="d-flex align-items-center gap-2">
+                      <select className="form-select form-select-sm" style={{ width: 200 }} value={selectedUserToAdd} onChange={e => setSelectedUserToAdd(e.target.value)}>
+                        <option value="">Select user to add</option>
+                        {filteredUsers.map(u => <option key={u._id} value={u._id}>{u.name} ({u.email})</option>)}
+                      </select>
+                      <button className="btn btn-sm btn-primary" onClick={addMember}>Add</button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <button className="btn btn-outline-secondary btn-sm" onClick={() => setShowCreateProject(true)}>New Project</button>
+              </div>
+            </div>
+          </div>
+
+          {activeProject ? (
+            <TaskBoard projectId={activeProject} />
+          ) : (
+            <div className="p-4 bg-white rounded shadow-sm">
+              <p>Select or create a project to start.</p>
+              <button className="btn btn-primary" onClick={() => setShowCreateProject(true)}>Create Project</button>
+            </div>
+          )}
+        </main>
+      </div>
+
+      <CreateProjectModal show={showCreateProject} onClose={() => setShowCreateProject(false)} onCreate={createProject} />
+    </>
   );
 }

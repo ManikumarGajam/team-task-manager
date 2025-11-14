@@ -4,23 +4,21 @@ import {
   createTask,
   getProjectTasks,
   updateStatus,
+  assignTask,
 } from "../controllers/taskController.js";
 
 import Task from "../models/Task.js";
 import Comment from "../models/Comment.js";
 import Activity from "../models/Activity.js";
+import Project from "../models/Project.js";
 
 const router = express.Router();
 
-
-
 // Task Detail Route (for TaskDetailsModal)
+// Now returns task + comments + activities + projectMembers
 router.get("/detail/:id", protect, async (req, res) => {
   try {
-    const task = await Task.findById(req.params.id).populate(
-      "assignee",
-      "name email"
-    );
+    const task = await Task.findById(req.params.id).populate("assignee", "name email");
 
     if (!task) return res.status(404).json({ message: "Task not found" });
 
@@ -34,10 +32,16 @@ router.get("/detail/:id", protect, async (req, res) => {
       "name email"
     );
 
+    const project = await Project.findById(task.project).populate(
+      "members",
+      "_id name email"
+    );
+
     return res.json({
       ...task._doc,
       comments,
       activities,
+      projectMembers: project ? project.members : [],
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -52,5 +56,8 @@ router.get("/:projectId", protect, getProjectTasks);
 
 // UPDATE STATUS
 router.put("/:id/status", protect, updateStatus);
+
+// NEW: assign / unassign task
+router.put("/:id/assign", protect, assignTask);
 
 export default router;

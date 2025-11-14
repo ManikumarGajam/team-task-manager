@@ -7,92 +7,36 @@ export default function TaskComments({ taskId }) {
   const [msg, setMsg] = useState("");
   const { user } = useContext(AuthContext);
 
-  // Load comments when modal opens
-  const loadComments = async () => {
-    try {
-      const res = await API.get(`/comments/${taskId}`);
-      setComments(res.data);
-    } catch (err) {
-      console.error("Error loading comments:", err);
-    }
+  const load = async () => {
+    const res = await API.get(`/comments/${taskId}`);
+    setComments(res.data || []);
   };
 
-  useEffect(() => {
-    loadComments();
-  }, [taskId]);
+  useEffect(() => { if (taskId) load(); }, [taskId]);
 
-  const sendComment = async () => {
+  const send = async () => {
     if (!msg.trim()) return;
-
-    try {
-      await API.post("/comments", {
-        taskId,
-        message: msg,
-      });
-
-      setMsg("");
-      loadComments();
-    } catch (err) {
-      console.error("Error sending comment:", err);
-    }
+    await API.post("/comments", { taskId, message: msg });
+    setMsg("");
+    load();
   };
 
   return (
-    <div style={{ marginTop: "15px" }}>
-      <h4>Comments</h4>
-
-      {/* Existing Comments */}
-      <div style={{ maxHeight: "150px", overflowY: "auto", marginBottom: "10px" }}>
-        {comments.length > 0 ? (
-          comments.map((c) => (
-            <div
-              key={c._id}
-              style={{
-                background: "#f0f0f0",
-                marginBottom: "6px",
-                padding: "8px",
-                borderRadius: "6px",
-              }}
-            >
-              <strong>{c.author?.name}</strong>
-              <p style={{ margin: "4px 0", fontSize: "14px" }}>{c.message}</p>
-              <span style={{ fontSize: "11px", opacity: 0.6 }}>
-                {new Date(c.createdAt).toLocaleString()}
-              </span>
-            </div>
-          ))
-        ) : (
-          <p style={{ opacity: 0.6 }}>No comments yet.</p>
-        )}
+    <div>
+      <h6>Comments</h6>
+      <div style={{ maxHeight: 180, overflowY: "auto", marginBottom: 8 }}>
+        {comments.length ? comments.map(c => (
+          <div key={c._id} className="p-2 mb-2" style={{ background: "var(--card)", borderRadius: 6 }}>
+            <div style={{ fontWeight: 600 }}>{c.author?.name}</div>
+            <div style={{ color: "var(--muted)" }}>{c.message}</div>
+            <div style={{ fontSize: 12, opacity: 0.7 }}>{new Date(c.createdAt).toLocaleString()}</div>
+          </div>
+        )) : <div className="text-muted">No comments</div>}
       </div>
 
-      {/* Add Comment */}
-      <div>
-        <input
-          placeholder="Write a comment..."
-          value={msg}
-          onChange={(e) => setMsg(e.target.value)}
-          style={{
-            width: "75%",
-            padding: "6px",
-            marginRight: "5px",
-            borderRadius: "5px",
-            border: "1px solid #ccc",
-          }}
-        />
-        <button
-          onClick={sendComment}
-          style={{
-            padding: "6px 12px",
-            background: "#0275d8",
-            color: "white",
-            border: "none",
-            borderRadius: "5px",
-            cursor: "pointer",
-          }}
-        >
-          Send
-        </button>
+      <div className="d-flex gap-2">
+        <input className="form-control" value={msg} onChange={e => setMsg(e.target.value)} placeholder="Write a comment..." />
+        <button className="btn btn-primary" onClick={send}>Send</button>
       </div>
     </div>
   );

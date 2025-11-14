@@ -54,18 +54,24 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 });
+
 // Protected test route — return current user info
 router.get("/me", protect, (req, res) => {
   // protect middleware sets req.user (without password)
   res.json(req.user);
 });
 
+// find by email (existing)
 router.get("/find/:email", async (req, res) => {
   const user = await User.findOne({ email: req.params.email }).select("_id name email");
   if (!user) return res.status(404).json({ message: "User not found" });
   res.json(user);
 });
 
-
+// NEW: Get all users (for dashboard member selection)
+router.get("/all", protect, async (req, res) => {
+  const users = await User.find().select("_id name email");
+  res.json(users);
+});
 
 export default router;
