@@ -1,11 +1,21 @@
 import multer from "multer";
-import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../utils/cloudinary.js";
+import path from "path";
+import fs from "fs";
 
-const storage = new CloudinaryStorage({
-  cloudinary,
-  params: {
-    folder: "task_attachments",
+// Ensure uploads folder exists
+const uploads = "uploads";
+if (!fs.existsSync(uploads)) {
+  fs.mkdirSync(uploads);
+}
+
+// Storage config
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename: function (req, file, cb) {
+    const ext = path.extname(file.originalname);
+    cb(null, Date.now() + ext);
   },
 });
 
